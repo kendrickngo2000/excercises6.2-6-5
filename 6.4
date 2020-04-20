@@ -1,0 +1,147 @@
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAXWORD 100
+#define BUFSIZE 100
+
+struct tnode {
+	char* word;
+	int count;
+	struct tnode* left;
+	struct tnode* right;
+};
+//functions
+int getword(char*, int);
+struct tnode* talloc(void);        
+char* strDup(char*);             
+struct tnode* addtree(struct tnode*, char*);
+void printtree(struct tnode*);
+void freetree(struct tnode*);
+struct tnode* sorttree(struct tnode*, struct tnode*); 
+
+int buf[BUFSIZE];       
+int bufp = 0;             
+
+
+struct tnode* addtree(struct tnode* p, char* w) {
+	int cond;
+
+	if (!p) {                        
+		p = talloc();                 
+		p->word = strDup(w);         
+		p->count = 1;
+		p->left = p->right = NULL;
+	}
+	else if (!(cond = strcmp(w, p->word)))
+		++p->count;                  
+	else if (cond < 0)             
+		p->left = addtree(p->left, w);
+	else
+		p->right = addtree(p->right, w);
+	return p;
+}
+
+
+void printtree(struct tnode* p) {
+	if (p) {
+		printtree(p->right);
+		printf("%4d %s\n", p->count, p->word);
+		printtree(p->left);
+	}
+}
+
+struct tnode* copyTree(struct tnode* p, struct tnode* root) {
+	if (!p) {
+		p = talloc();
+		p->word = strDup(root->word);
+		p->count = root->count;
+		p->left = p->right = NULL;
+	}
+	else if (root->count <= p->count)
+		p->left = copyTree(p->left, root);
+	else
+		p->right = copyTree(p->right, root);
+	return p;
+}
+
+struct tnode* sorttree(struct tnode* p, struct tnode* root) {
+	struct tnode* copyTree(struct tnode*, struct tnode*);
+
+	if (root) {
+		p = sorttree(p, root->left);
+		p = copyTree(p, root);
+		p = sorttree(p, root->right);
+	}
+	return p;
+}
+
+struct tnode* talloc(void) {
+	return malloc(sizeof(struct tnode));
+}
+
+char* strDup(char* s)  {
+	char* p;
+	p = malloc(strlen(s) + 1); 
+	if (p)
+		strcpy(p, s);
+	return p;
+}
+
+void freetree(struct tnode* node) {
+	if (!node)
+		return;
+	freetree(node->left);
+	freetree(node->right);
+	free(node->word);
+	free(node);
+}
+
+int getword(char* word, int lim) {
+	int c, getch(void);
+	void ungetch(int);
+	char* w = word;
+
+	while (isblank(c = getch()))
+		;
+	if (c != EOF)
+		*w++ = c;
+	if (!isalpha(c)) {
+		*w = '\0';
+		return c;
+	}
+	for (; --lim > 0; w++)
+		if (!isalnum(*w = getch())) {
+			ungetch(*w);
+			break;
+		}
+	*w = '\0';
+	return word[0];
+}
+
+int getch(void) {
+	return (bufp > 0) ? buf[--bufp] : getchar();
+}
+
+void ungetch(int c) {
+	if (bufp >= BUFSIZE)
+		printf("ungetch: too many characters\n");
+	else
+		buf[bufp++] = c;
+}
+
+int main(void)
+{
+	struct tnode* root;                
+	char word[MAXWORD];                
+
+	root = NULL;
+	while (getword(word, MAXWORD) != EOF)
+		if (isalpha(word[0]))
+			root = (addtree(root, word)); 
+	printtree(root);
+	freetree(root);
+	root = NULL;
+	return 0;
+}
