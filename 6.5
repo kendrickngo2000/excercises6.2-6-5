@@ -1,0 +1,111 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define HASHSIZE 101
+
+struct nlist {
+	struct nlist* next;
+	char* name;
+	char* defn;
+};
+
+unsigned hash(char* );
+struct nlist* lookup(char*);
+struct nlist* install(char*, char*);
+void undef(char*);
+void printtab(struct nlist* [], int);
+void freetable(struct nlist* [], int);
+
+static struct nlist* hashtab[HASHSIZE];
+
+char* strDup(char* s) {
+	char* p;
+	p = malloc(strlen(s) + 1); /* +1 for '\0' */
+	if (p)
+		strcpy(p, s);
+	return p;
+}
+
+unsigned hash(char* s) {
+	unsigned hashval;
+
+	for (hashval = 0; *s; s++)
+		hashval = *s + (31 * hashval);
+	return hashval % HASHSIZE;
+}
+
+struct nlist* lookup(char* s) {
+	struct nlist* np;
+	for (np = hashtab[hash(s)]; np; np = np->next)
+		if (!strcmp(s, np->name))
+			return np;              
+	return NULL;
+}
+
+struct nlist* install(char* name, char* defn) {
+	struct nlist* np;
+	unsigned hashval;
+
+	if (!(np = lookup(name))) { 
+		np = malloc(sizeof(*np));
+		if (!np || !(np->name = strDup(name)))
+			return NULL;           
+		hashval = hash(name);
+		np->next = hashtab[hashval];
+		hashtab[hashval] = np;
+	}
+	else                           
+		free((void*)np->defn);       
+
+	np->defn = strDup(defn);           
+
+	if (!np->defn)
+		return NULL;
+	return np;
+}
+
+void undef(char* s) {
+	struct nlist* np;
+
+	if ((np = lookup(s))) {
+		free((void*)np->name);
+		free((void*)np->defn);
+		hashtab[hash(s)] = np->next;
+		free((void*)np);
+	}
+}
+
+void printtab(struct nlist* node[], int size) {
+	int i;
+	for (i = 0; i < size; ++i)
+		if (node[i])
+			printf("%i  name: %s  defn: %s\n", i, node[i]->name, node[i]->defn);
+}
+
+void freetable(struct nlist* node[], int size) {
+	int i;
+
+	for (i = 0; i < size; ++i)
+		if (node[i]) {
+			free(node[i]->name);
+			free(node[i]->defn);
+			free(node[i]);
+		}
+}
+
+int main(void) {
+	struct nlist* p;
+
+	p = install("YES", "1");
+	p = install("NO", "0");
+	printf("Hash Table Values:\n");
+	printtab(hashtab, HASHSIZE);
+
+	printf("\nDelete \"YES\"\n\n");
+	undef("YES");
+	printf("Hash Table Values (After Deletion):\n");
+	printtab(hashtab, HASHSIZE);
+	freetable(hashtab, HASHSIZE);      
+	return 0;
+}
